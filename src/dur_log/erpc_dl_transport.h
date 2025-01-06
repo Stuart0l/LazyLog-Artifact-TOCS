@@ -24,6 +24,7 @@ class ERPCDurLogTransport : public ERPCTransport {
 
    protected:
     std::vector<std::thread> server_threads_;
+    static std::string server_uri_;
 
     static DurabilityLog *dur_log_;
     static void server_func(erpc::Nexus *nexus, int th_id, const Properties *p);

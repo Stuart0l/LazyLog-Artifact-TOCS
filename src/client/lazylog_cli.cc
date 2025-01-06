@@ -36,13 +36,13 @@ void LazyLogClient::Initialize(const Properties &p) {
 
     bool is_user_provided_id = p.ContainsKey("dur_log.client_id");
     uint64_t thread_count = std::stoull(p.GetProperty("shard.threadcount", "1"));
-    if (is_user_provided_id) {
-        uint64_t id = std::stoull(p.GetProperty("dur_log.client_id"));
-        be_rd_cli_ = std::make_shared<NaiveReadBackend>(id % thread_count);
-    } else {
-        be_rd_cli_ = std::make_shared<NaiveReadBackend>(global_th_id_.fetch_add(1) % thread_count);
-    }
-    be_rd_cli_->InitializeBackend(p);
+    // if (is_user_provided_id) {
+    //     uint64_t id = std::stoull(p.GetProperty("dur_log.client_id"));
+    //     be_rd_cli_ = std::make_shared<NaiveReadBackend>(id % thread_count);
+    // } else {
+    //     be_rd_cli_ = std::make_shared<NaiveReadBackend>(global_th_id_.fetch_add(1) % thread_count);
+    // }
+    // be_rd_cli_->InitializeBackend(p);
 
 #ifdef CORFU
     LOG(INFO) << "Connecting to backup shard...";
@@ -54,14 +54,14 @@ void LazyLogClient::Initialize(const Properties &p) {
     be_rd_cli_backup_2_->InitializeBackendBackup(p, 2);
 #endif
 
-    // int f = (dl_servers.size() - 1) / 2;
-    // maj_threshold_ = f + (f + 1) / 2 + 1;  // super majority: f + ceil(f/2) + 1
-    maj_threshold_ = dl_servers.size();  // todo: calculate the real super majority
+    int f = (dl_servers.size() - 1) / 2;
+    maj_threshold_ = f + (f + 1) / 2 + 1;  // super majority: f + ceil(f/2) + 1
+    // maj_threshold_ = dl_servers.size();  // todo: calculate the real super majority
     LOG(INFO) << "party size: " << dl_servers.size() << ", quorum size: " << maj_threshold_;
 }
 
 void LazyLogClient::Finalize() {
-    be_rd_cli_->FinalizeBackend();
+    // be_rd_cli_->FinalizeBackend();
 
     for (auto dc : dur_clis_) {
         dc.second->Finalize();
@@ -192,7 +192,7 @@ bool LazyLogClient::quorumCompleted(std::shared_ptr<RPCToken> pri_token,
     if (!pri_token->Complete()) return false;
     int n_complete = 0;
     for (auto &t : tokens) {
-        if (t->Complete()) n_complete++;
+        if (t->AllPrevComplete()) n_complete++;
     }
 
     return n_complete + 1 >= maj_threshold_;

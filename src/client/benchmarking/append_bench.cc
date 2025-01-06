@@ -42,7 +42,7 @@ void writer_thread(int thd_id, hdr_histogram* histogram, const Properties& prop,
         if (rlim) rlim->Consume(1);
     
         auto start = high_resolution_clock::now();
-        auto ret = cli.AppendEntryAll(data);
+        auto ret = cli.AppendEntryQuorum(data);
         hdr_record_value_atomic(histogram, duration_cast<nanoseconds>(high_resolution_clock::now() - start).count());
         idx++;
         if (duration_cast<seconds>(high_resolution_clock::now() - begin).count() >= runtime_secs) break;
@@ -88,6 +88,9 @@ int main(int argc, const char* argv[]) {
     std::cout << "[append_bench]: write throughput " << compute_throughput() << " ops/sec" << std::endl;
 
     std::cout << "[append_bench]: latency metrics " << std::endl;
+    for (int i = 1; i < 100; i++) {
+        std::cout << i << "," << hdr_value_at_percentile(histogram, i) << std::endl;
+    }
     hdr_percentiles_print(histogram, stdout, 5, 1, CLASSIC);
     std::cout << "[append_bench]: percentile latencies " << std::endl
               << "\tp50: " << hdr_value_at_percentile(histogram, 50.0) << std::endl

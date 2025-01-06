@@ -52,6 +52,7 @@ class DurabilityLogERPCCli : public DurabilityLogCli {
 
    protected:
     int session_num_;
+    std::string server_uri_;
     static std::unordered_map<std::string, std::atomic<uint8_t> > local_rpc_cnt_;
     bool del_nexus_on_finalize_;
     bool is_primary_;

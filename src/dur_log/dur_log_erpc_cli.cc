@@ -18,6 +18,7 @@ DurabilityLogERPCCli::~DurabilityLogERPCCli() {}
 
 void DurabilityLogERPCCli::InitializeConn(const Properties &p, const std::string &server_uri, void *param) {
     is_primary_ = (server_uri == p.GetProperty(PROP_DL_PRI_URI, PROP_DL_PRI_URI_DEFAULT));
+    server_uri_ = server_uri;
 
     {
         std::lock_guard<std::mutex> lock(init_lk_);
@@ -191,12 +192,21 @@ bool DurabilityLogERPCCli::CheckAndRunOnce() {
     }
 }
 
-void DurabilityLogERPCCli::AddPendingReq(std::shared_ptr<RPCToken> &token) { pending_reqs_.push(token); }
+void DurabilityLogERPCCli::AddPendingReq(std::shared_ptr<RPCToken> &token) {
+    pending_reqs_.push(token);
+    // LOG(INFO) << server_uri_ << " push, remaining " << pending_reqs_.size();
+}
 
 void DurabilityLogERPCCli::CheckPendingReq() {
     if (pending_reqs_.empty()) return;
     RunERPCOnce();
-    if (pending_reqs_.front()->Complete()) pending_reqs_.pop();
+    if (pending_reqs_.size() > 10000 && (pending_reqs_.size() & 8191) == 0)
+        LOG(WARNING) << server_uri_ << " pending request: " << pending_reqs_.size();
+    while (!pending_reqs_.empty() && pending_reqs_.front()->Complete()) {
+        pending_reqs_.front()->SetPrevComplete();
+        pending_reqs_.pop();
+        // LOG(INFO) << server_uri_ << " pop, remaining " << pending_reqs_.size();
+    }
 }
 
 void DurabilityLogERPCCli::pollForRpcComplete() {

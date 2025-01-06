@@ -9,6 +9,7 @@
 namespace lazylog {
 
 DurabilityLog *ERPCDurLogTransport::dur_log_ = nullptr;
+std::string ERPCDurLogTransport::server_uri_ = "";
 
 void svr_sm_handler(int, erpc::SmEventType, erpc::SmErrType, void *) {}
 
@@ -25,6 +26,7 @@ ERPCDurLogTransport::~ERPCDurLogTransport() {
 
 void ERPCDurLogTransport::Initialize(const Properties &p) {
     const std::string server_uri = p.GetProperty(PROP_DL_SVR_URI, PROP_DL_SVR_URI_DEFAULT);
+    server_uri_ = server_uri;
     nexus_ = new erpc::Nexus(server_uri, 0, 0);
 
     nexus_->register_req_func(APPEND_ENTRY, AppendEntryHandler);
@@ -90,6 +92,13 @@ void ERPCDurLogTransport::AppendEntryHandler(erpc::ReqHandle *req_handle, void *
 
     rpc_->resize_msg_buffer(&resp, sizeof(pri_seq));
     *reinterpret_cast<uint64_t *>(resp.buf_) = pri_seq;
+
+    if (server_uri_.compare("10.10.1.6:31850") == 0) {
+        using namespace std::chrono;
+        auto start = high_resolution_clock::now();
+        while (duration_cast<microseconds>(high_resolution_clock::now() - start).count() < 100)
+            rpc_->run_event_loop_once();
+    }
 
     rpc_->enqueue_response(req_handle, &resp);
 }

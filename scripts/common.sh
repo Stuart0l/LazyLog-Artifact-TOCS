@@ -1,5 +1,5 @@
-cons_svr="node4"
-dur_svrs=("node1" "node2" "node3")
+cons_svr="node6"
+dur_svrs=("node1" "node2" "node3" "node4" "node5")
 
 if [ "$scalable_tput" = "true" ]; then 
     shard_pri=("node5" "node7" "node9" "node11" "node13" "node15" "node17" "node19" "node21" "node23")
@@ -9,8 +9,8 @@ elif [ "$threeway" = "true" ]; then
     shard_bac=("node6" "node8" "node10" "node12" "node14")
     shard_bac1=("node14" "node12" "node8" "node10" "node6")
 else 
-    shard_pri=("node5" "node7" "node9" "node11" "node13")
-    shard_bac=("node6" "node8" "node10" "node12" "node14")
+    shard_pri=("node7" "node9" "node11" "node13")
+    shard_bac=("node8" "node10" "node12" "node14")
 fi
 client_nodes=("node0")
 
@@ -66,7 +66,7 @@ mixed_cmd() {
 
 # args: runtime in secs, number of threads, request size
 append_cmd() {
-    echo "sudo GLOG_minloglevel=1 ./build/src/client/benchmarking/append_bench -P ${cfg_dir}/be.prop -P ${cfg_dir}/dl_client.prop -P ${cfg_dir}/rdma.prop -p runtime_secs=$1 -p threadcount=$2 -p request_size_bytes=$3 -p limit.ops=$4"
+    echo "sudo GLOG_minloglevel=0 ./build/src/client/benchmarking/append_bench -P ${cfg_dir}/be.prop -P ${cfg_dir}/dl_client.prop -P ${cfg_dir}/rdma.prop -p runtime_secs=$1 -p threadcount=$2 -p request_size_bytes=$3 -p limit.ops=$4"
 }
 
 dur_svrs_ip=()
