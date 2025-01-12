@@ -59,6 +59,7 @@ class ConsensusLog {
     uint64_t total_fetch_time_;
     uint64_t total_append_time_;
     uint64_t total_gc_time_;
+    uint64_t total_update_time_;
     uint64_t total_be_n_;
 };
 

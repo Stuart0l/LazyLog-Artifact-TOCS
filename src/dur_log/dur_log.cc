@@ -97,6 +97,8 @@ int DurabilityLog::SpecReadEntry(const uint64_t idx, LogEntry &e) { return 0; }
 
 uint16_t DurabilityLog::GetView() const { return view_; }
 
+bool DurabilityLog::IsPrimary() const { return is_primary_; }
+
 #ifdef CORFU
 uint64_t DurabilityLog::GetGSN() {
     uint64_t ret = gsn_.fetch_add(1);

@@ -1,6 +1,7 @@
 #include "shard_server.h"
 
 #include "../../rpc/common.h"
+#include "../../utils/timer.h"
 #include "sys/mman.h"
 
 namespace lazylog {
@@ -25,6 +26,9 @@ int ShardServer::entry_fd_ = -1;
 std::unordered_map<uint64_t, std::atomic<int>> ShardServer::cache_size_atomic_;
 #endif
 
+uint64_t total_time = 0;
+uint64_t total_n = 0;
+
 void svr_sm_handler(int, erpc::SmEventType, erpc::SmErrType, void *) {}
 
 ShardServer::ShardServer() : is_primary_(false) {}
@@ -39,6 +43,9 @@ std::ostream &operator<<(std::ostream &out, ShardServerMetrics const &metrics) {
 ShardServer::~ShardServer() {
     if (is_primary_) {
         std::cout << metrics_;
+        std::cout << "average time " << total_time * 1.0 / total_n << std::endl;
+    } else {
+        std::cout << "average rep time " << total_time * 1.0 / total_n << std::endl;
     }
 }
 
@@ -168,6 +175,7 @@ void ShardServer::read_server_func(const Properties &p, int th_id) {
 void ShardServer::AppendBatchHandler(erpc::ReqHandle *req_handle, void *_context) {
     auto *req = req_handle->get_req_msgbuf();
     auto &resp = req_handle->pre_resp_msgbuf_;
+    Timer timer;
 
     auto num = *reinterpret_cast<uint32_t *>(req->buf_);
     LogEntry first_e_in_batch;
@@ -183,6 +191,8 @@ void ShardServer::AppendBatchHandler(erpc::ReqHandle *req_handle, void *_context
         RunERPCOnce();
     }
 
+    timer.Start();
+
     {
         std::unique_lock<std::shared_mutex> write_lock(cache_rw_lock_);
         addToEntryCache(base_idx, req->buf_);
@@ -192,6 +202,9 @@ void ShardServer::AppendBatchHandler(erpc::ReqHandle *req_handle, void *_context
     while (!allRPCCompleted(tokens)) {
         RunERPCOnce();
     }
+
+    total_time += timer.End();
+    total_n++;
 
     {
         std::unique_lock<std::shared_mutex> write_lock(cache_rw_lock_);
@@ -227,6 +240,8 @@ void ShardServer::AppendEntryHandler(erpc::ReqHandle *req_handle, void *_context
 void ShardServer::ReplicateBatchHandler(erpc::ReqHandle *req_handle, void *context) {
     auto *req = req_handle->get_req_msgbuf();
     auto &resp = req_handle->pre_resp_msgbuf_;
+    Timer timer;
+    timer.Start();
 
     auto num = *reinterpret_cast<uint32_t *>(req->buf_);
     LogEntry first_e_in_batch;
@@ -243,6 +258,9 @@ void ShardServer::ReplicateBatchHandler(erpc::ReqHandle *req_handle, void *conte
 
     rpc_->resize_msg_buffer(&resp, sizeof(Status));
     rpc_->enqueue_response(req_handle, &resp);
+
+    total_time += timer.End();
+    total_n++;
 }
 
 void ShardServer::ReadEntryHandler(erpc::ReqHandle *req_handle, void *context) {

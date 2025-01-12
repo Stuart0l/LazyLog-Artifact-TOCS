@@ -27,6 +27,7 @@ class DurabilityLogERPCCli : public DurabilityLogCli {
 
     bool AppendEntry(const LogEntry &e) override;
     bool AppendEntryAsync(const LogEntry &e, std::shared_ptr<RPCToken> &token) override;
+    uint64_t OrderEntry(const LogEntry &e, std::shared_ptr<RPCToken> &token) override;
     std::tuple<uint64_t, uint64_t, uint16_t> GetNumDurEntry() override;
     uint32_t FetchUnorderedEntries(std::vector<LogEntry> &e, uint32_t max_entries_num) override;
     uint32_t FetchUnorderedEntries(std::vector<LogEntry> &e, uint64_t from, uint32_t max_entries_num) override;
@@ -35,6 +36,7 @@ class DurabilityLogERPCCli : public DurabilityLogCli {
     void DeleteOrderedEntriesAsync(std::vector<LogEntry::ReqID> &req_ids) override;
     uint64_t ProcessFetchedEntries(const std::vector<LogEntry> &es, std::vector<LogEntry::ReqID> &req_ids) override;
     bool IsPrimary() override;
+    std::string GetUri() override;
     bool CheckAndRunOnce() override;
 
 #ifdef CORFU
@@ -55,6 +57,7 @@ class DurabilityLogERPCCli : public DurabilityLogCli {
     static std::unordered_map<std::string, std::atomic<uint8_t> > local_rpc_cnt_;
     bool del_nexus_on_finalize_;
     bool is_primary_;
+    std::string server_uri_;
 
     erpc::MsgBuffer req_;
     erpc::MsgBuffer resp_;

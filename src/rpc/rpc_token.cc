@@ -10,4 +10,8 @@ void RPCToken::SetComplete() { completed_ = true; }
 
 void RPCToken::Reset() { completed_ = false; }
 
+uint64_t RPCToken::GetTsc() const { return tsc_; }
+
+void RPCToken::SetTsc(const uint64_t tsc) { tsc_ = tsc; }
+
 } // namespace lazylog

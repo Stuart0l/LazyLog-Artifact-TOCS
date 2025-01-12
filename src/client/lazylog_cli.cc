@@ -15,6 +15,9 @@ std::atomic<uint64_t> LazyLogClient::global_cli_id_ = 1;
 
 using namespace std::chrono;
 
+std::unordered_map<std::string, uint64_t> total_time = {};
+uint64_t total_n = 0;
+
 LazyLogClient::LazyLogClient() : client_id_(global_cli_id_.fetch_add(1)), maj_threshold_(0), finalized_(false) {}
 
 void LazyLogClient::Initialize(const Properties &p) {
@@ -32,6 +35,8 @@ void LazyLogClient::Initialize(const Properties &p) {
         // dur_clis_[s] = std::dynamic_pointer_cast<DurabilityLogCli>(RPCFactory::CreateCliRPCTransport(p));
         dur_clis_[s] = std::make_shared<DurabilityLogERPCCli>();  // TODO: use dynamic type
         dur_clis_[s]->InitializeConn(p, s, nullptr);
+
+        total_time[s] = 0;
     }
 
     bool is_user_provided_id = p.ContainsKey("dur_log.client_id");
@@ -62,6 +67,10 @@ void LazyLogClient::Initialize(const Properties &p) {
 
 void LazyLogClient::Finalize() {
     be_rd_cli_->FinalizeBackend();
+
+    for (auto &tt : total_time) {
+        std::cout << tt.first << ":" << tt.second * 1.0 / total_n << std::endl;
+    }
 
     for (auto dc : dur_clis_) {
         dc.second->Finalize();
@@ -144,10 +153,29 @@ std::pair<uint64_t, uint64_t> LazyLogClient::AppendEntryAll(const std::string &d
 #endif
 }
 
-uint64_t LazyLogClient::OrderEntry(const std::string &data) {
-    LOG(WARNING) << "Unimplemented";
-    return 0;
-    // return dur_clis_[dl_primary_]->OrderEntry(constructLogEntry(data));
+std::pair<uint64_t, uint64_t> LazyLogClient::OrderEntry(const std::string &data) {
+    LogEntry e = constructLogEntry(data);
+    std::vector<std::shared_ptr<RPCToken>> tokens;
+    std::unordered_map<std::string, std::shared_ptr<RPCToken>> tsc_mapping;
+    for (auto &dc : dur_clis_) {
+        auto token = std::make_shared<RPCToken>();
+        dc.second->OrderEntry(e, token);
+        tokens.emplace_back(token);
+        tsc_mapping[dc.second->GetUri()] = token;
+    }
+
+    do {
+        for (auto &dc : dur_clis_) {
+            dc.second->RunERPCOnce();
+        }
+    } while (!allCompleted(tokens));
+
+    for (auto &dc : dur_clis_) {
+        total_time[dc.first] += tsc_mapping[dc.first]->GetTsc();
+    }
+    total_n++;
+
+    return std::make_pair(e.client_id, e.client_seq);
 }
 
 bool LazyLogClient::ReadEntry(const uint64_t idx, std::string &data) {

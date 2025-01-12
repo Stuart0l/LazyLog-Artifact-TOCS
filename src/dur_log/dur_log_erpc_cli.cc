@@ -10,7 +10,10 @@ void dur_cli_sm_handler(int, erpc::SmEventType, erpc::SmErrType, void *) {}
 
 void rpc_cont_func(void *_ctx, void *tag) { reinterpret_cast<DurabilityLogERPCCli *>(tag)->notifyRpcComplete(); }
 
-void rpc_cont_func_async(void *_ctx, void *tag) { reinterpret_cast<RPCToken *>(tag)->SetComplete(); }
+void rpc_cont_func_async(void *_ctx, void *tag) {
+    reinterpret_cast<RPCToken *>(tag)->SetComplete();
+    reinterpret_cast<RPCToken *>(tag)->SetTsc(erpc::rdtsc() - reinterpret_cast<RPCToken *>(tag)->GetTsc());
+}
 
 DurabilityLogERPCCli::DurabilityLogERPCCli() : del_nexus_on_finalize_(true), is_primary_(false), complete_(false) {}
 
@@ -18,6 +21,7 @@ DurabilityLogERPCCli::~DurabilityLogERPCCli() {}
 
 void DurabilityLogERPCCli::InitializeConn(const Properties &p, const std::string &server_uri, void *param) {
     is_primary_ = (server_uri == p.GetProperty(PROP_DL_PRI_URI, PROP_DL_PRI_URI_DEFAULT));
+    server_uri_ = server_uri;
 
     {
         std::lock_guard<std::mutex> lock(init_lk_);
@@ -109,6 +113,16 @@ bool DurabilityLogERPCCli::AppendEntryAsync(const LogEntry &e, std::shared_ptr<R
     return true;
 }
 
+uint64_t DurabilityLogERPCCli::OrderEntry(const LogEntry &e, std::shared_ptr<RPCToken> &token) {
+    token->SetTsc(erpc::rdtsc());
+    size_t len = Serializer(e, req_.buf_);
+
+    rpc_->resize_msg_buffer(&req_, len);
+    rpc_->enqueue_request(session_num_, ORDER_ENTRY, &req_, &resp_, rpc_cont_func_async, token.get());
+
+    return 0;
+}
+
 std::tuple<uint64_t, uint64_t, uint16_t> DurabilityLogERPCCli::GetNumDurEntry() {
     if (!IsPrimary()) LOG(WARNING) << "Not getting tail from a primary DL server";
 
@@ -181,6 +195,10 @@ uint64_t DurabilityLogERPCCli::ProcessFetchedEntries(const std::vector<LogEntry>
                                                  std::vector<LogEntry::ReqID> &req_ids) { return 0; }
 
 bool DurabilityLogERPCCli::IsPrimary() { return is_primary_; }
+
+std::string DurabilityLogERPCCli::GetUri() {
+    return server_uri_;
+}
 
 bool DurabilityLogERPCCli::CheckAndRunOnce() {
     if (rpc_tkn_.Complete()) {

@@ -10,7 +10,7 @@ class DurabilityLogCli : public ERPCTransport {
    public:
     virtual bool AppendEntry(const LogEntry &e) = 0;
     virtual bool AppendEntryAsync(const LogEntry &e, std::shared_ptr<RPCToken> &token) = 0;
-    virtual uint64_t OrderEntry(const LogEntry &e) = delete;  // temporarily deprecated, not used for now
+    virtual uint64_t OrderEntry(const LogEntry &e, std::shared_ptr<RPCToken> &token) = 0;
     virtual std::tuple<uint64_t, uint64_t, uint16_t> GetNumDurEntry() = 0;
     virtual uint32_t FetchUnorderedEntries(std::vector<LogEntry> &e, uint32_t max_entries_num) = 0;
     virtual uint32_t FetchUnorderedEntries(std::vector<LogEntry> &e, uint64_t from, uint32_t max_entries_num) = 0;
@@ -22,6 +22,7 @@ class DurabilityLogCli : public ERPCTransport {
     virtual uint64_t ProcessFetchedEntries(const std::vector<LogEntry> &es, std::vector<LogEntry::ReqID> &req_ids) = 0;
     virtual bool IsPrimary() = 0;
     virtual bool CheckAndRunOnce() = 0;
+    virtual std::string GetUri() = 0;
 #ifdef CORFU
     virtual uint64_t getGSN() = 0;
 #endif

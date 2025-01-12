@@ -36,6 +36,7 @@ class DurabilityLog {
      */
     virtual int SpecReadEntry(const uint64_t idx, LogEntry &e);
     virtual uint16_t GetView() const;
+    virtual bool IsPrimary() const;
 
 #ifdef CORFU
     virtual uint64_t GetGSN();

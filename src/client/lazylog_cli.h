@@ -32,7 +32,7 @@ class LazyLogClient {
     std::pair<uint64_t, uint64_t> AppendEntry(const std::string &data);
     std::pair<uint64_t, uint64_t> AppendEntryQuorum(const std::string &data);
     std::pair<uint64_t, uint64_t> AppendEntryAll(const std::string &data);
-    uint64_t OrderEntry(const std::string &data);
+    std::pair<uint64_t, uint64_t> OrderEntry(const std::string &data);
     bool ReadEntry(const uint64_t idx, std::string &data);
     bool ReadEntries(const uint64_t from, const uint64_t to, std::vector<LogEntry> &es);
     /**

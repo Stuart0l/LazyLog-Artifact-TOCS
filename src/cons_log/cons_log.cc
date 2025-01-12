@@ -21,13 +21,15 @@ ConsensusLog::ConsensusLog()
       total_fetch_time_(0),
       total_append_time_(0),
       total_gc_time_(0),
+      total_update_time_(0),
       total_be_n_(0) {}
 
 ConsensusLog::~ConsensusLog() {
     std::cout << "Average BE append size: " << total_be_size_ * 1.0 / total_be_n_ << std::endl
               << "Average fetch time: " << total_fetch_time_ * 1e0 / total_be_n_ << "us" << std::endl
               << "Average append time: " << total_append_time_ * 1e0 / total_be_n_ << "us" << std::endl
-              << "Average GC time: " << total_gc_time_ * 1e0 / total_be_n_ << "us" << std::endl;
+              << "Average GC time: " << total_gc_time_ * 1e0 / total_be_n_ << "us" << std::endl
+              << "Average update idx time: " << total_update_time_ * 1.0 /total_be_n_ << "us" << std::endl;
 }
 
 void ConsensusLog::Initialize(const Properties& p, void* param) {
@@ -150,16 +152,21 @@ void ConsensusLog::store(bool& run) {
         last_log_idx = d.second->ProcessFetchedEntries(buf_to_store.entries_buf_, req_ids);
         d.second->DeleteOrderedEntriesAsync(req_ids);
     }
-    total_gc_time_ += timer.End();
 
     while (!allDeletionCompleted());  // busy waiting
+
+    total_gc_time_ += timer.End();
 
     buf_to_store.entries_buf_.clear();
 
     buf_to_store.empty_ = true;
     buf_to_store.cv_empty_.notify_one();
 
+    timer.Start();
+
     backend_->UpdateGlobalIdx(last_log_idx);
+
+    total_update_time_ += timer.End();
 
     round++;
 }

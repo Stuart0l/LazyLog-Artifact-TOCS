@@ -166,7 +166,7 @@ uint64_t DurabilityLogFlat::AppendEntry(LogEntry& e) {
 
     // LOG(INFO) << "[[FLAT]] LogEntry [" << e.client_id << ", " << e.client_seq << "], sequence " << seq;
 
-    return seq;
+    return idx;
 }
 
 uint32_t DurabilityLogFlat::FetchUnorderedEntries(std::vector<LogEntry>& e, uint32_t max_entries_num) {

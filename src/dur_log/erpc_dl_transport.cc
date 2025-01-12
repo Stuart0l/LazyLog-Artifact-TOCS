@@ -3,6 +3,7 @@
 #include "dur_log_flat.h"
 #include "../rpc/common.h"
 #include "../rpc/rpc_factory.h"
+#include "../utils/timer.h"
 
 #include "glog/logging.h"
 
@@ -12,6 +13,13 @@ DurabilityLog *ERPCDurLogTransport::dur_log_ = nullptr;
 
 void svr_sm_handler(int, erpc::SmEventType, erpc::SmErrType, void *) {}
 
+uint64_t total_time = 0;
+uint64_t total_n = 0;
+
+struct AppContext {
+    erpc::Rpc<erpc::IBTransport> *rpc_;
+};
+
 ERPCDurLogTransport::ERPCDurLogTransport() {
     if (!dur_log_) {
         dur_log_ = new DurabilityLogFlat();
@@ -19,16 +27,17 @@ ERPCDurLogTransport::ERPCDurLogTransport() {
 }
 
 ERPCDurLogTransport::~ERPCDurLogTransport() {
+    std::cout << "avg waiting " << total_time * 1.0 / total_n << std::endl;
     if (dur_log_)
         delete dur_log_;
 }
 
 void ERPCDurLogTransport::Initialize(const Properties &p) {
     const std::string server_uri = p.GetProperty(PROP_DL_SVR_URI, PROP_DL_SVR_URI_DEFAULT);
-    nexus_ = new erpc::Nexus(server_uri, 0, 0);
+    nexus_ = new erpc::Nexus(server_uri, 0, 1);
 
     nexus_->register_req_func(APPEND_ENTRY, AppendEntryHandler);
-    nexus_->register_req_func(ORDER_ENTRY, OrderEntryHandler);
+    nexus_->register_req_func(ORDER_ENTRY, OrderEntryHandler, erpc::ReqFuncType::kBackground);
     nexus_->register_req_func(GET_N_DUR_ENTRY, GetNumDurEntryHandler);
     nexus_->register_req_func(FETCH_UNORDERED_ENTRIES, FetchUnorderedEntriesHandler);
     nexus_->register_req_func(DEL_ORDERED_ENTRIES, DeleteOrderedEntriesHandler);
@@ -61,9 +70,12 @@ void ERPCDurLogTransport::Finalize() {
 
 void ERPCDurLogTransport::server_func(erpc::Nexus *nexus, int th_id, const Properties *p) {
     const uint8_t phy_port = std::stoi(p->GetProperty("erpc.phy_port", "0"));
+    AppContext c;
+
     if (!rpc_)
-        rpc_ = new erpc::Rpc<erpc::CTransport>(nexus, nullptr, DL_SVR_RPCID_OFFSET + th_id,
+        rpc_ = new erpc::Rpc<erpc::CTransport>(nexus, static_cast<void*>(&c), DL_SVR_RPCID_OFFSET + th_id,
                                                svr_sm_handler, phy_port);  // use range [128, 191] for server rpc id
+    c.rpc_ = rpc_;
     rpc_use_cnt_.fetch_add(1);
 
     const size_t msg_size = std::stoull(p->GetProperty(PROP_DL_MSG_SIZE, PROP_DL_MSG_SIZE_DEFAULT));
@@ -98,15 +110,30 @@ void ERPCDurLogTransport::OrderEntryHandler(erpc::ReqHandle *req_handle, void *c
     auto *req = req_handle->get_req_msgbuf();
     auto &resp = req_handle->pre_resp_msgbuf_;
 
+    auto *rpc = static_cast<AppContext*>(context)->rpc_;
+
+    auto start = erpc::rdtsc();
+
     LogEntry e;
     Deserializer(e, req->buf_);
     e.flags = 0;
-    uint64_t seq = dur_log_->AppendEntry(e);
+    uint64_t idx = dur_log_->AppendEntry(e);
 
-    rpc_->resize_msg_buffer(&resp, sizeof(seq));
-    *reinterpret_cast<uint64_t *>(resp.buf_) = seq;
+    if (dur_log_->IsPrimary()) {
+        LOG(WARNING) << "idx " << idx << ", n ordered " << dur_log_->GetNumOrderedEntry();
+        while (idx >= dur_log_->GetNumOrderedEntry()) {
+            ;
+        }
+        LOG(WARNING) << "2 idx " << idx << ", n ordered " << dur_log_->GetNumOrderedEntry();
+    }
 
-    rpc_->enqueue_response(req_handle, &resp);
+    rpc->resize_msg_buffer(&resp, sizeof(idx));
+    *reinterpret_cast<uint64_t *>(resp.buf_) = idx;
+
+    rpc->enqueue_response(req_handle, &resp);
+
+    total_time += (erpc::rdtsc() - start);
+    total_n++;
 }
 
 void ERPCDurLogTransport::GetNumDurEntryHandler(erpc::ReqHandle *req_handle, void *context) {
