@@ -6,14 +6,15 @@
 #include <mutex>
 #include <ratio>
 #include <thread>
+#include <functional>
 
 namespace lazylog {
 
 // Token bucket rate limiter for single client
 class RateLimiter {
    public:
-    RateLimiter(int64_t r, int64_t b)
-        : r_(r * TOKEN_PRECISION), b_(b * TOKEN_PRECISION), tokens_(0), last_(Clock::now()) {}
+    RateLimiter(int64_t r, int64_t b, std::function<void()> wait=nullptr)
+        : r_(r * TOKEN_PRECISION), b_(b * TOKEN_PRECISION), tokens_(0), last_(Clock::now()), wait_(wait) {}
 
     inline void Consume(int64_t n) {
         std::unique_lock<std::mutex> lock(mutex_);
@@ -35,7 +36,14 @@ class RateLimiter {
         if (tokens_ < 0) {
             lock.unlock();
             int64_t wait_time = -tokens_ * 1000000000 / r_;
-            std::this_thread::sleep_for(std::chrono::nanoseconds(wait_time));
+            if (!wait_)
+                std::this_thread::sleep_for(std::chrono::nanoseconds(wait_time));
+            else {
+                using namespace std::chrono;
+                auto start = high_resolution_clock::now();
+                while (duration_cast<nanoseconds>(high_resolution_clock::now() - start).count() < wait_time)
+                    wait_();
+            }
         }
     }
 
@@ -62,6 +70,7 @@ class RateLimiter {
     int64_t b_;
     int64_t tokens_;
     Clock::time_point last_;
+    std::function<void()> wait_;
 };
 
 }  // namespace lazylog
