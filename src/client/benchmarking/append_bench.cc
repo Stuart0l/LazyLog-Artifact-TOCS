@@ -107,6 +107,8 @@ int main(int argc, const char* argv[]) {
 
     std::cout << "[append_bench]: latency metrics " << std::endl;
     hdr_percentiles_print(histogram, stdout, 5, 1, CLASSIC);
+    for (int i = 1; i < 100; i++)
+        std::cout << i << "," << hdr_value_at_percentile(histogram, i) << std::endl;
     std::cout << "[append_bench]: percentile latencies " << std::endl
               << "\tp50: " << hdr_value_at_percentile(histogram, 50.0) << std::endl
               << "\tp95: " << hdr_value_at_percentile(histogram, 95.0) << std::endl
