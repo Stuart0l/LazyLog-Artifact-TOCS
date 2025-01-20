@@ -52,12 +52,13 @@ void ConsensusLog::Initialize(const Properties& p, void* param) {
 
     pri_dur_cli_ = dur_cli_[pri_dur_uri];
 
-    std::vector<std::string> datalog_uri =
+    datalog_uri_ =
         SeparateValue(p.GetProperty(PROP_SHD_PRI_URI, PROP_SHD_PRI_URI_DEFAULT), ',');
     shard_num_ = std::stoll(p.GetProperty("shard.num", "1"));
+    LOG(INFO) << shard_num_ << "shards";
     for (uint64_t i = 0; i < shard_num_; i++) {
-        datalog_clis_[datalog_uri[i]] = std::make_shared<DataLogClient>();
-        datalog_clis_[datalog_uri[i]]->InitializeConn(p, datalog_uri[i], (void*)-1);
+        datalog_clis_[datalog_uri_[i]] = std::make_shared<DataLogClient>();
+        datalog_clis_[datalog_uri_[i]]->InitializeConn(p, datalog_uri_[i], (void*)-1);
     }
 }
 
@@ -160,6 +161,19 @@ void ConsensusLog::store(bool& run) {
     while (buf_to_store.empty_) {
         buf_to_store.cv_full_.wait_for(lg, std::chrono::seconds(1));
         if (!run) return;
+    }
+
+    uint64_t last_shard_id = shard_num_ - 1;
+    if (datalog_clis_.find(datalog_uri_[last_shard_id]) != datalog_clis_.end()) {
+        for (auto &e : buf_to_store.entries_buf_) {
+            if (__glibc_unlikely(!e.flags)) break;
+            if (std::stoull(e.data) == shard_num_) {
+                LOG(INFO) << "disconnecting";
+                datalog_clis_.erase(datalog_uri_[last_shard_id]);
+                LOG(INFO) << "disconnect to " << datalog_uri_[last_shard_id];
+                break;
+            }
+        }
     }
 
     timer.Start();

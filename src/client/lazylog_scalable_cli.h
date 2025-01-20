@@ -55,6 +55,8 @@ class LazyLogScalableClient : public LazyLogClient {
     int shard_num_;
     std::vector<int> gsn_shard_list_;
     int shard_id_;
+    std::chrono::high_resolution_clock::time_point start_t_;
+    bool start_ = false;
 };
 
 }  // namespace lazylog

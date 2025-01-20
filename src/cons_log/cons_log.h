@@ -55,6 +55,7 @@ class ConsensusLog {
     uint64_t shard_num_;
     std::string cons_primary_server;
     std::unordered_map<std::string, std::shared_ptr<DataLogClient> > datalog_clis_;
+    std::vector<std::string> datalog_uri_;
     uint64_t max_ordered_idx_;
 
     uint32_t max_fetch_size_;
