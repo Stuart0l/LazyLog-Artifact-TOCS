@@ -13,6 +13,8 @@ using namespace lazylog;
 using namespace std::chrono;
 
 std::unordered_map<int, std::pair<uint64_t, uint64_t>> num_requests_and_durations;
+std::atomic<uint64_t> total_append = 0;
+bool stop = false;
 
 void writer_thread(int thd_id, hdr_histogram* histogram, const Properties& prop, int64_t ops_limit) {
     std::cout << "[append_bench]: starting thread " << thd_id << " ..." << std::endl;
@@ -45,9 +47,11 @@ void writer_thread(int thd_id, hdr_histogram* histogram, const Properties& prop,
             if (rlim) rlim->Consume(1);
             auto start = high_resolution_clock::now();
             auto ret = cli.AppendEntryAll(data);
+            if (__glibc_unlikely(ret.first == UINT64_MAX)) break;
             hdr_record_value_atomic(histogram,
                                     duration_cast<nanoseconds>(high_resolution_clock::now() - start).count());
             idx++;
+            total_append++;
             if (duration_cast<seconds>(high_resolution_clock::now() - begin).count() >= runtime_secs) break;
         }
         num_requests_and_durations[thd_id] = {idx,
@@ -64,12 +68,32 @@ void writer_thread(int thd_id, hdr_histogram* histogram, const Properties& prop,
             auto ret = cli.AppendEntryAll(data);
             hdr_record_value_atomic(histogram,
                                     duration_cast<nanoseconds>(high_resolution_clock::now() - start).count());
+            total_append++;
         }
         num_requests_and_durations[thd_id] = {request_count,
                                               duration_cast<nanoseconds>(high_resolution_clock::now() - begin).count()};
         std::cout << "[append_bench]: thread " << thd_id << " done writing " << request_count << " requests"
                   << std::endl;
+        stop = true;
         return;
+    }
+}
+
+void status_thread(int rpt_interval_ms) {
+    if (rpt_interval_ms == 0) return;
+
+    using namespace std::chrono;
+    auto last = high_resolution_clock::now();
+    uint64_t prev_append = total_append.load();
+
+    while (!stop) {
+        usleep(rpt_interval_ms * 1000);
+        auto now = high_resolution_clock::now();
+        auto elapsed = duration_cast<microseconds>(now - last).count();
+        uint64_t curr_append = total_append.load();
+        std::cout << "appended " << curr_append - prev_append << " entries in " << elapsed << "us" << std::endl;
+        prev_append = curr_append;
+        last = now;
     }
 }
 
@@ -96,6 +120,7 @@ int main(int argc, const char* argv[]) {
     std::cout << "[append_bench]: running " << threads << " threads" << std::endl;
 
     std::vector<std::thread> writer_threads;
+    std::thread status_th(status_thread, std::stoi(prop.GetProperty("status.interval", "0")));
     for (int i = 0; i < threads; i++) {
         writer_threads.emplace_back(std::move(std::thread(writer_thread, i, histogram, std::ref(prop), per_thread_ops)));
     }
