@@ -119,12 +119,17 @@ void ERPCDurLogTransport::OrderEntryHandler(erpc::ReqHandle *req_handle, void *c
     e.flags = 0;
     uint64_t idx = dur_log_->AppendEntry(e);
 
+    using namespace std::chrono;
+    auto start_t = high_resolution_clock::now();
     if (dur_log_->IsPrimary()) {
-        LOG(WARNING) << "idx " << idx << ", n ordered " << dur_log_->GetNumOrderedEntry();
-        while (idx >= dur_log_->GetNumOrderedEntry()) {
+        // LOG(WARNING) << "idx " << idx << ", n ordered " << dur_log_->GetNumOrderedEntry();
+        // while (idx >= dur_log_->GetNumOrderedEntry()) {
+        //     ;
+        // }
+        while (duration_cast<microseconds>(high_resolution_clock::now() - start_t).count() < 50) {
             ;
         }
-        LOG(WARNING) << "2 idx " << idx << ", n ordered " << dur_log_->GetNumOrderedEntry();
+        // LOG(WARNING) << "2 idx " << idx << ", n ordered " << dur_log_->GetNumOrderedEntry();
     }
 
     rpc->resize_msg_buffer(&resp, sizeof(idx));
