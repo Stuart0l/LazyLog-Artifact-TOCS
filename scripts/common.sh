@@ -12,7 +12,7 @@ else
     shard_pri=("node5" "node7" "node9" "node11" "node13")
     shard_bac=("node6" "node8" "node10" "node12" "node14")
 fi
-client_nodes=("node0" "node15")
+client_nodes=("node0")
 username="luoxh"
 usergroup="rasl-PG0"
 
@@ -28,7 +28,7 @@ dur_cmd() {
 }
 
 cons_cmd() {
-    echo "sudo GLOG_minloglevel=1 ./build/src/cons_log/conssvr -P ${cfg_dir}/conslog.prop -P ${cfg_dir}/rdma.prop -P ${cfg_dir}/be.prop -P ${cfg_dir}/dl_client.prop"
+    echo "sudo GLOG_minloglevel=0 ./build/src/cons_log/conssvr -P ${cfg_dir}/conslog.prop -P ${cfg_dir}/rdma.prop -P ${cfg_dir}/be.prop -P ${cfg_dir}/dl_client.prop"
 }
 
 shard_cmd_primary() {
@@ -68,7 +68,7 @@ mixed_cmd() {
 
 # args: runtime in secs, number of threads, request size
 append_cmd() {
-    echo "sudo GLOG_minloglevel=1 ./build/src/client/benchmarking/append_bench -P ${cfg_dir}/be.prop -P ${cfg_dir}/dl_client.prop -P ${cfg_dir}/rdma.prop -p runtime_secs=$1 -p threadcount=$2 -p request_size_bytes=$3 -p limit.ops=$4"
+    echo "sudo GLOG_minloglevel=0 ./build/src/client/benchmarking/append_bench -P ${cfg_dir}/be.prop -P ${cfg_dir}/dl_client.prop -P ${cfg_dir}/rdma.prop -p runtime_secs=$1 -p threadcount=$2 -p request_size_bytes=$3 -p limit.ops=$4 -p status.interval=100"
 }
 
 dur_svrs_ip=()

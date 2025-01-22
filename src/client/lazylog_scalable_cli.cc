@@ -201,8 +201,6 @@ bool LazyLogScalableClient::ReadEntries(const uint64_t from, const uint64_t to, 
 }
 
 std::pair<uint64_t, uint64_t> LazyLogScalableClient::AppendEntryAll(const std::string &data) {
-    if (__glibc_unlikely(shard_id_ < 0))
-        return {UINT64_MAX, UINT64_MAX};
     LogEntry e = constructLogEntry({});
 
     e.data = std::to_string(shard_id_);
@@ -210,13 +208,9 @@ std::pair<uint64_t, uint64_t> LazyLogScalableClient::AppendEntryAll(const std::s
 
     if (__glibc_unlikely(!start_)) {
         using namespace std::chrono;
-        if (duration_cast<seconds>(high_resolution_clock::now() - start_t_).count() > 10) {
-            shard_id_ = -shard_id_; // change shard
-            LOG(INFO) << client_id_ << " change shard to " << shard_id_;
-            start_ = true;
-            e.data = std::to_string(shard_num_);
-            e.size = e.data.size();
-        }
+        LOG(INFO) << client_id_ << " delay start";
+        sleep(10);
+        start_ = true;
     }
 
     std::vector<std::shared_ptr<RPCToken> > tokens;
@@ -226,8 +220,6 @@ std::pair<uint64_t, uint64_t> LazyLogScalableClient::AppendEntryAll(const std::s
         tokens.emplace_back(tkn);
     }
 
-    if (__glibc_unlikely(shard_id_ < 0))
-        return {UINT64_MAX, UINT64_MAX};
 
     e.size = data.size();
     e.data = data;

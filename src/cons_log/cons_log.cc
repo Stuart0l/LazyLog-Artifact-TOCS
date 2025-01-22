@@ -56,10 +56,11 @@ void ConsensusLog::Initialize(const Properties& p, void* param) {
         SeparateValue(p.GetProperty(PROP_SHD_PRI_URI, PROP_SHD_PRI_URI_DEFAULT), ',');
     shard_num_ = std::stoll(p.GetProperty("shard.num", "1"));
     LOG(INFO) << shard_num_ << "shards";
-    for (uint64_t i = 0; i < shard_num_; i++) {
+    for (uint64_t i = 0; i < shard_num_ - 1; i++) {
         datalog_clis_[datalog_uri_[i]] = std::make_shared<DataLogClient>();
         datalog_clis_[datalog_uri_[i]]->InitializeConn(p, datalog_uri_[i], (void*)-1);
     }
+    p_ = p;
 }
 
 void ConsensusLog::Finalize() {
@@ -164,13 +165,15 @@ void ConsensusLog::store(bool& run) {
     }
 
     uint64_t last_shard_id = shard_num_ - 1;
-    if (datalog_clis_.find(datalog_uri_[last_shard_id]) != datalog_clis_.end()) {
+    if (datalog_clis_.find(datalog_uri_[last_shard_id]) == datalog_clis_.end()) {
         for (auto &e : buf_to_store.entries_buf_) {
             if (__glibc_unlikely(!e.flags)) break;
-            if (std::stoull(e.data) == shard_num_) {
-                LOG(INFO) << "disconnecting";
-                datalog_clis_.erase(datalog_uri_[last_shard_id]);
-                LOG(INFO) << "disconnect to " << datalog_uri_[last_shard_id];
+            if (std::stoull(e.data) == last_shard_id) {
+                LOG(INFO) << "connecting";
+                datalog_clis_[datalog_uri_[last_shard_id]] = std::make_shared<DataLogClient>();
+                datalog_clis_[datalog_uri_[last_shard_id]]->InitializeConn(p_, datalog_uri_[last_shard_id],
+                                                                            (void*)-1);
+                LOG(INFO) << "connect to " << datalog_uri_[last_shard_id];
                 break;
             }
         }
