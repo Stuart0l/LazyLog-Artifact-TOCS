@@ -19,7 +19,7 @@ void writer_thread(int thd_id, hdr_histogram* histogram, const Properties& prop,
 
     RateLimiter *rlim = nullptr;
     if (ops_limit > 0) {
-        rlim = new RateLimiter(ops_limit, ops_limit, ERPCTransport::RunERPCOnce);
+        rlim = new RateLimiter(ops_limit, ops_limit);
     }
 
     LazyLogScalableClient cli;

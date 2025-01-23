@@ -34,6 +34,8 @@ void LazyLogScalableClient::Initialize(const Properties &p) {
         SeparateValue(p.GetProperty(PROP_SHD_PRI_URI, PROP_SHD_PRI_URI_DEFAULT), ',');
     std::vector<std::string> shd_backups =
         SeparateValue(p.GetProperty(PROP_SHD_BACKUP_URI, PROP_SHD_BACKUP_URI_DEFAULT), ',');
+    std::vector<std::string> shd_backups2 =
+        SeparateValue(p.GetProperty(PROP_SHD_BACKUP2_URI, PROP_SHD_BACKUP2_URI_DEFAULT), ',');
 
     shard_num_ = std::stoll(p.GetProperty("shard.num", "1"));
     uint64_t client_id = std::stoll(p.GetProperty("dur_log.client_id"));
@@ -43,8 +45,11 @@ void LazyLogScalableClient::Initialize(const Properties &p) {
         DataLogShard shd;
         shd.pri = std::make_shared<DataLogClient>();
         shd.bac = std::make_shared<DataLogClient>();
+        shd.bac2 = std::make_shared<DataLogClient>();
         shd.pri->InitializeConn(p, shd_primaries[i], nullptr);
         shd.bac->InitializeConn(p, shd_backups[i], nullptr);
+        shd.bac2->InitializeConn(p, shd_backups2[i], nullptr);
+
         datalog_clis_.emplace(i, shd);
     }
     shard_id_ = shard_id;
@@ -215,6 +220,9 @@ std::pair<uint64_t, uint64_t> LazyLogScalableClient::AppendEntryAll(const std::s
     auto tkn_bac = std::make_shared<RPCToken>();
     datalog_clis_[shard_id_].bac->AppendEntryShardAsync(e, tkn_bac);
     tokens.emplace_back(tkn_bac);
+    auto tkn_bac2 = std::make_shared<RPCToken>();
+    datalog_clis_[shard_id_].bac2->AppendEntryShardAsync(e, tkn_bac);
+    tokens.emplace_back(tkn_bac2);
 
     do {
         ERPCTransport::RunERPCOnce();

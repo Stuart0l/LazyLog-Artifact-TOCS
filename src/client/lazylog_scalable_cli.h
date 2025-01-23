@@ -48,6 +48,7 @@ class LazyLogScalableClient : public LazyLogClient {
     struct DataLogShard {
         std::shared_ptr<DataLogClient> pri;
         std::shared_ptr<DataLogClient> bac;
+        std::shared_ptr<DataLogClient> bac2;
     };
     std::unordered_map<uint64_t, DataLogShard> datalog_clis_;
     LazyLogScalableClientStatistics stats_;

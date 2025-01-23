@@ -42,6 +42,9 @@ const std::string PROP_SHD_MSG_SIZE_DEFAULT = "2048";
 const std::string PROP_SHD_BACKUP_URI = "shard.backup_uri";
 const std::string PROP_SHD_BACKUP_URI_DEFAULT = "localhost:31860";
 
+const std::string PROP_SHD_BACKUP2_URI = "shard.backup2_uri";
+const std::string PROP_SHD_BACKUP2_URI_DEFAULT = "localhost:31862";
+
 const std::string PROP_SHD_FOLDER_PATH = "shard.folder_path";
 const std::string PROP_SHD_FOLDER_PATH_DEFAULT = "./data/";
 
