@@ -48,6 +48,8 @@ void writer_thread(int thd_id, hdr_histogram* histogram, const Properties& prop,
             hdr_record_value_atomic(histogram,
                                     duration_cast<nanoseconds>(high_resolution_clock::now() - start).count());
             idx++;
+            if (idx % 100000 == 0)
+                std::cout << "append " << idx << std::endl;
             if (duration_cast<seconds>(high_resolution_clock::now() - begin).count() >= runtime_secs) break;
         }
         num_requests_and_durations[thd_id] = {idx,

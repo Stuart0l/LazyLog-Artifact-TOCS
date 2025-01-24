@@ -2,9 +2,9 @@
 
 set -x
 
-threeway="false"
+threeway="true"
 scalable_tput="false"
-cfg_dir="cfg"
+cfg_dir="cfg_3_way"
 
 source $(dirname $0)/common.sh
 

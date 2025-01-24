@@ -12,7 +12,7 @@ else
     shard_pri=("node5" "node7" "node9" "node11" "node13")
     shard_bac=("node6" "node8" "node10" "node12" "node14")
 fi
-client_nodes=("node0" "node15")
+client_nodes=("node0")
 username="luoxh"
 usergroup="rasl-PG0"
 
@@ -177,7 +177,12 @@ kill_shard_svrs() {
     do
         ssh -o StrictHostKeyChecking=no -i $pe $username@$svr "sudo bash -s datalogsvr" < $script_dir/kill_process.sh &
         ssh -o StrictHostKeyChecking=no -i $pe $username@$svr "sudo kill -9 \$(sudo lsof -t -i:31860)" > /dev/null 2>&1
-    done 
+    done
+    for svr in "${shard_bac1[@]}";
+    do
+        ssh -o StrictHostKeyChecking=no -i $pe $username@$svr "sudo bash -s datalogsvr" < $script_dir/kill_process.sh &
+        ssh -o StrictHostKeyChecking=no -i $pe $username@$svr "sudo kill -9 \$(sudo lsof -t -i:31861)" > /dev/null 2>&1
+    done
     wait
 }
 
