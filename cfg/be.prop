@@ -5,5 +5,5 @@ shard.msg_size=6291456
 shard.stripe_unit_size=8000
 shard.num=1
 shard.folder_path=/data
-shard.threadcount=18
+shard.threadcount=1
 bootstrap.servers=node-5:9092

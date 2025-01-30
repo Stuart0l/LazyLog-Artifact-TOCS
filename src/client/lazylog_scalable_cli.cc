@@ -221,7 +221,7 @@ std::pair<uint64_t, uint64_t> LazyLogScalableClient::AppendEntryAll(const std::s
     datalog_clis_[shard_id_].bac->AppendEntryShardAsync(e, tkn_bac);
     tokens.emplace_back(tkn_bac);
     auto tkn_bac2 = std::make_shared<RPCToken>();
-    datalog_clis_[shard_id_].bac2->AppendEntryShardAsync(e, tkn_bac);
+    datalog_clis_[shard_id_].bac2->AppendEntryShardAsync(e, tkn_bac2);
     tokens.emplace_back(tkn_bac2);
 
     do {

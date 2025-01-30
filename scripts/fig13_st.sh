@@ -8,9 +8,9 @@ cfg_dir="cfg_3_way"
 
 source $(dirname $0)/common.sh
 
-num_shards=(1)
+num_shards=(5)
 msg_size=(4096)
-clients=(1)
+clients=(5)
 cli_idx=0
 
 for size in "${msg_size[@]}";
@@ -33,7 +33,7 @@ do
         run_dur_svrs
         run_cons_svr
 
-        run_append_bench 120 $c $size 30000
+        run_append_bench 120 $c $size 150000
         kill_cons_svr
         kill_shard_svrs
         kill_dur_svrs

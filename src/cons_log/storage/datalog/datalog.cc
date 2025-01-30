@@ -189,6 +189,7 @@ void DataLog::OrderBatchHandler(erpc::ReqHandle *req_handle, void *_context) {
 
     // replicate to backups
     std::vector<RPCToken> tokens;
+    tokens.reserve(backups_.size());
     for (auto &b : backups_) {
         tokens.emplace_back();
         b.second->ReplicateBatchAsync(req->buf_, req->get_data_size(), tokens.back());
