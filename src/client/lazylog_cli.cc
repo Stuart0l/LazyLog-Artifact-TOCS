@@ -170,6 +170,13 @@ std::pair<uint64_t, uint64_t> LazyLogClient::OrderEntry(const std::string &data)
         }
     } while (!allCompleted(tokens));
 
+    uint64_t idx = *reinterpret_cast<const uint64_t*>(dur_clis_[dl_primary_]->GetResp());
+
+    while (true) {
+        auto tail = GetTail();
+        if (std::get<1>(tail) > idx) break;
+    }
+
     for (auto &dc : dur_clis_) {
         total_time[dc.first] += tsc_mapping[dc.first]->GetTsc();
     }

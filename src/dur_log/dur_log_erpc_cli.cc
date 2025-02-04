@@ -209,6 +209,10 @@ bool DurabilityLogERPCCli::CheckAndRunOnce() {
     }
 }
 
+const void *DurabilityLogERPCCli::GetResp() {
+    return resp_.buf_;
+}
+
 void DurabilityLogERPCCli::AddPendingReq(std::shared_ptr<RPCToken> &token) { pending_reqs_.push(token); }
 
 void DurabilityLogERPCCli::CheckPendingReq() {

@@ -38,6 +38,7 @@ class DurabilityLogERPCCli : public DurabilityLogCli {
     bool IsPrimary() override;
     std::string GetUri() override;
     bool CheckAndRunOnce() override;
+    const void *GetResp() override;
 
 #ifdef CORFU
     virtual uint64_t getGSN();

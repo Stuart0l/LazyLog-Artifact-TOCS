@@ -23,6 +23,7 @@ class DurabilityLogCli : public ERPCTransport {
     virtual bool IsPrimary() = 0;
     virtual bool CheckAndRunOnce() = 0;
     virtual std::string GetUri() = 0;
+    virtual const void *GetResp() = 0;
 #ifdef CORFU
     virtual uint64_t getGSN() = 0;
 #endif

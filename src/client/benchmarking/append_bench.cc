@@ -89,6 +89,9 @@ int main(int argc, const char* argv[]) {
 
     std::cout << "[append_bench]: write throughput " << compute_throughput() << " ops/sec" << std::endl;
 
+    for (int i = 1; i < 100; i++)
+        std::cout << i << "," << hdr_value_at_percentile(histogram, i) << std::endl;
+
     std::cout << "[append_bench]: latency metrics " << std::endl;
     hdr_percentiles_print(histogram, stdout, 5, 1, CLASSIC);
     std::cout << "[append_bench]: percentile latencies " << std::endl
