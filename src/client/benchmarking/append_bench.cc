@@ -3,6 +3,7 @@
 #include <chrono>
 #include <thread>
 #include <unordered_map>
+#include <random>
 
 #include "../../utils/properties.h"
 #include "../../utils/ratelimit.h"
@@ -13,8 +14,12 @@ using namespace std::chrono;
 
 std::unordered_map<int, std::pair<uint64_t, uint64_t>> num_requests_and_durations;
 
-void writer_thread(int thd_id, hdr_histogram* histogram, const Properties& prop, int64_t ops_limit) {
+void writer_thread(int thd_id, hdr_histogram* histogram, const Properties& prop, int64_t ops_limit, int eager_per) {
     std::cout << "[append_bench]: starting thread " << thd_id << " ..." << std::endl;
+
+    std::random_device rand;
+    std::mt19937 gen(rand());
+    std::uniform_int_distribution<> dist(1, 100);
 
     RateLimiter *rlim = nullptr;
     if (ops_limit > 0) {
@@ -42,7 +47,12 @@ void writer_thread(int thd_id, hdr_histogram* histogram, const Properties& prop,
         if (rlim) rlim->Consume(1);
     
         auto start = high_resolution_clock::now();
-        auto ret = cli.OrderEntry(data);
+        
+        if (dist(gen) <= eager_per)
+            cli.OrderEntry(data);
+        else
+            cli.AppendEntryAll(data);
+
         hdr_record_value_atomic(histogram, duration_cast<nanoseconds>(high_resolution_clock::now() - start).count());
         idx++;
         if (idx % 100000 == 0)
@@ -75,13 +85,14 @@ int main(int argc, const char* argv[]) {
     int threads = std::stoll(prop.GetProperty("threadcount", "1"));
     const int64_t ops_limit = std::stoi(prop.GetProperty("limit.ops", "0"));
     int64_t per_thread_ops = ops_limit / threads;
+    int eager_per = std::stoi(prop.GetProperty("eager.per", "0"));
 
     std::cout << "[append_bench]: running " << threads << " threads, each executing for " << runtime_secs
               << " seconds..." << std::endl;
 
     std::vector<std::thread> writer_threads;
     for (int i = 0; i < threads; i++) {
-        writer_threads.emplace_back(std::move(std::thread(writer_thread, i, histogram, std::ref(prop), per_thread_ops)));
+        writer_threads.emplace_back(std::move(std::thread(writer_thread, i, histogram, std::ref(prop), per_thread_ops, eager_per)));
     }
     for (auto& t : writer_threads) {
         t.join();

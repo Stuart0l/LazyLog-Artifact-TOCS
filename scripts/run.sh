@@ -76,7 +76,7 @@ elif [ "$mode" -eq 2 ]; then
                 run_dur_svrs
                 run_cons_svr
 
-                run_append_bench 120 $c $size 0
+                run_append_bench 120 $c $size 0 0
                 kill_cons_svr
                 kill_shard_svrs
                 kill_dur_svrs

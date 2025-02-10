@@ -66,7 +66,7 @@ mixed_cmd() {
 
 # args: runtime in secs, number of threads, request size
 append_cmd() {
-    echo "sudo GLOG_minloglevel=1 ./build/src/client/benchmarking/append_bench -P ${cfg_dir}/be.prop -P ${cfg_dir}/dl_client.prop -P ${cfg_dir}/rdma.prop -p runtime_secs=$1 -p threadcount=$2 -p request_size_bytes=$3 -p limit.ops=$4"
+    echo "sudo GLOG_minloglevel=1 ./build/src/client/benchmarking/append_bench -P ${cfg_dir}/be.prop -P ${cfg_dir}/dl_client.prop -P ${cfg_dir}/rdma.prop -p runtime_secs=$1 -p threadcount=$2 -p request_size_bytes=$3 -p limit.ops=$4 -p eager.per=$5"
 }
 
 dur_svrs_ip=()
@@ -160,7 +160,7 @@ run_append_bench() {
         else
             num_jobs_for_client=$low_num
         fi
-        ssh -o StrictHostKeyChecking=no -i $pe $username@$client "sh -c \"cd $ll_dir && nohup $(append_cmd $1 $num_jobs_for_client $3 $4) -p dur_log.client_uri=$(get_ip $client):31851 -p node_id=$i > $log_dir/append_bench_$client.log 2>&1\"" &
+        ssh -o StrictHostKeyChecking=no -i $pe $username@$client "sh -c \"cd $ll_dir && nohup $(append_cmd $1 $num_jobs_for_client $3 $4 $5) -p dur_log.client_uri=$(get_ip $client):31851 -p node_id=$i > $log_dir/append_bench_$client.log 2>&1\"" &
     done
     wait
 }
